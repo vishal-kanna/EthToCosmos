@@ -12,14 +12,18 @@ const { MsgSubmitInference } = require("./proto/arka/deployment/v1beta1/tx");
 const { createProtobufRpcClient, QueryClient } = require("@cosmjs/stargate");
 require("dotenv").config();
 
+const MNEMONIC = process.env.COSMOS_MNEMONIC;
+const ETH_PRIVATE_KEY = process.env.ETH_PRIVATE_KEY;
+const COSMOS_URL = process.env.ARKA_URL;
+const CONTRACT_ADDRESS = process.env.CONTRACT_ADDRESS;
+const GANACHE_URL = process.env.GANACHE_URL;
+
 const {
   QueryClientImpl,
   QueryInferenceRequest,
 } = require("./proto/arka/deployment/v1beta1/query");
-const web3 = new Web3("http://127.0.0.1:7545");
+const web3 = new Web3(GANACHE_URL);
 
-const MNEMONIC = process.env.COSMOS_MNEMONIC;
-const ETH_PRIVATE_KEY = process.env.ETH_PRIVATE_KEY;
 web3.eth
   .getChainId()
   .then((result) => {
@@ -29,17 +33,12 @@ web3.eth
     console.error(error);
   });
 
-const contract = new web3.eth.Contract(
-  config1.CONTRACTABI,
-  config1.CONTRACT_ADDRESS
-);
+const contract = new web3.eth.Contract(config1.CONTRACTABI, CONTRACT_ADDRESS);
 const responseArray = [];
 
 async function getInference(inferenceId, deploymentId, sender) {
   try {
-    const tendermintClient = await Tendermint34Client.connect(
-      "https://beta.arka.network/rpc/"
-    );
+    const tendermintClient = await Tendermint34Client.connect(COSMOS_URL);
     const queryClient = new QueryClient(tendermintClient);
     const rpcClient = createProtobufRpcClient(queryClient);
     const queryService = new QueryClientImpl(rpcClient);
@@ -121,7 +120,7 @@ async function storeInferenceOnBlockchain(response) {
 
     const signedTx = await web3.eth.accounts.signTransaction(
       {
-        to: config1.CONTRACT_ADDRESS,
+        to: CONTRACT_ADDRESS,
         data,
         gas,
         gasPrice,
@@ -140,7 +139,7 @@ async function storeInferenceOnBlockchain(response) {
 }
 
 // Create a Stargate client
-const stargateClient = StargateClient.connect(config1.ARKA_URL);
+const stargateClient = StargateClient.connect(COSMOS_URL);
 // // Function to submit inference to Cosmos
 async function submitInferenceToCosmos(deployment_id, request) {
   console.log("wallet from mnemonic initialisation");
@@ -152,7 +151,7 @@ async function submitInferenceToCosmos(deployment_id, request) {
   });
 
   const client = await SigningStargateClient.connectWithSigner(
-    config1.ARKA_URL,
+    COSMOS_URL,
     signer,
     { registry: myregistry }
   );
@@ -230,7 +229,7 @@ async function submitInference(deploymentId, request) {
 
   const signedTx = await web3.eth.accounts.signTransaction(
     {
-      to: config1.CONTRACT_ADDRESS,
+      to: CONTRACT_ADDRESS,
       data,
       gas,
       gasPrice,
